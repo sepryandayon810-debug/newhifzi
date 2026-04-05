@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#6366f1">
+  <title>WebPOS - Top Up Kas</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  
+  <link rel="stylesheet" href="../css/style.css">
+  
+  <style>
+    .topup-card {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .amount-display {
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--success);
+      text-align: center;
+      padding: 2rem;
+      background: rgba(16, 185, 129, 0.1);
+      border-radius: var(--radius-xl);
+      margin-bottom: 1.5rem;
+      border: 2px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .numpad-btn {
+      padding: 1.5rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      font-size: 1.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .numpad-btn:hover {
+      background: var(--bg-secondary);
+    }
+
+    .numpad-btn.action {
+      background: var(--success);
+      color: white;
+      border-color: var(--success);
+    }
+
+    .quick-amounts {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .quick-amount {
+      padding: 0.5rem 1rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 50px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .quick-amount:hover {
+      background: var(--success);
+      color: white;
+      border-color: var(--success);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-container">
+          <div class="logo-icon"><i class="fas fa-cash-register"></i></div>
+          <span class="logo-text">WebPOS</span>
+        </div>
+      </div>
+      <button class="menu-toggle" id="menuToggle"><i class="fas fa-chevron-left"></i></button>
+      <div class="sidebar-search">
+        <div class="search-input-wrapper">
+          <i class="fas fa-search"></i>
+          <input type="text" class="search-input" placeholder="Cari menu...">
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Transaksi</div>
+          <ul class="nav-menu">
+            <li class="nav-item"><a href="kas.html" class="nav-link"><i class="fas fa-wallet"></i><span>Kas Management</span></a></li>
+            <li class="nav-item"><a href="kas-topup.html" class="nav-link active"><i class="fas fa-arrow-up"></i><span>Top Up</span></a></li>
+            <li class="nav-item"><a href="kas-tarik.html" class="nav-link"><i class="fas fa-arrow-down"></i><span>Tarik Tunai</span></a></li>
+          </ul>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-profile" id="userProfile">
+          <div class="user-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
+          <div class="user-info">
+            <div class="user-name" id="userName">Loading...</div>
+            <div class="user-role" id="userRole">-</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="main-header">
+        <div class="header-left">
+          <button class="btn-icon d-md-none" id="mobileMenuToggle"><i class="fas fa-bars"></i></button>
+          <h1 class="header-title">Top Up Kas</h1>
+        </div>
+        <div class="header-actions">
+          <button class="btn-icon" id="btnLogout"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="topup-card">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title"><i class="fas fa-arrow-up" style="color: var(--success);"></i> Top Up Kas</h3>
+            </div>
+            <div class="card-body">
+              <div class="amount-display" id="topupAmount">Rp 0</div>
+
+              <div class="quick-amounts">
+                <button class="quick-amount" data-amount="50000">50.000</button>
+                <button class="quick-amount" data-amount="100000">100.000</button>
+                <button class="quick-amount" data-amount="200000">200.000</button>
+                <button class="quick-amount" data-amount="500000">500.000</button>
+                <button class="quick-amount" data-amount="1000000">1.000.000</button>
+              </div>
+
+              <div class="numpad">
+                <button class="numpad-btn" data-num="1">1</button>
+                <button class="numpad-btn" data-num="2">2</button>
+                <button class="numpad-btn" data-num="3">3</button>
+                <button class="numpad-btn" data-num="4">4</button>
+                <button class="numpad-btn" data-num="5">5</button>
+                <button class="numpad-btn" data-num="6">6</button>
+                <button class="numpad-btn" data-num="7">7</button>
+                <button class="numpad-btn" data-num="8">8</button>
+                <button class="numpad-btn" data-num="9">9</button>
+                <button class="numpad-btn action" data-action="clear">C</button>
+                <button class="numpad-btn" data-num="0">0</button>
+                <button class="numpad-btn action" data-action="backspace"><i class="fas fa-backspace"></i></button>
+              </div>
+
+              <!-- Admin Fee Section -->
+              <div class="form-group">
+                <label class="form-label">Admin Fee (Masuk ke Laba)</label>
+                <div class="input-group">
+                  <span class="input-group-text">Rp</span>
+                  <input type="number" class="form-input" id="adminFee" value="0" min="0" placeholder="0">
+                </div>
+                <small style="color: var(--text-muted); font-size: 0.75rem;">
+                  <i class="fas fa-info-circle"></i> Admin fee akan masuk ke perhitungan laba
+                </small>
+              </div>
+
+              <!-- Summary -->
+              <div class="card" style="background: var(--bg-secondary); margin-bottom: 1rem;">
+                <div class="card-body" style="padding: 1rem;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: var(--text-muted);">Nominal Top Up</span>
+                    <span id="summaryTopup">Rp 0</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: var(--text-muted);">Admin Fee</span>
+                    <span id="summaryAdminFee">Rp 0</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+                    <span style="font-weight: 600;">Total</span>
+                    <span style="font-weight: 700; color: var(--success);" id="summaryTotal">Rp 0</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Keterangan (Opsional)</label>
+                <input type="text" class="form-input" id="topupNote" placeholder="Contoh: Setoran modal tambahan">
+              </div>
+
+              <button class="btn btn-success btn-block btn-lg" id="btnSimpanTopup">
+                <i class="fas fa-save"></i>
+                Simpan Top Up
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <nav class="mobile-nav">
+      <a href="../index.html" class="mobile-nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+      <a href="kasir.html" class="mobile-nav-item"><i class="fas fa-cash-register"></i><span>Kasir</span></a>
+      <a href="produk.html" class="mobile-nav-item"><i class="fas fa-box"></i><span>Produk</span></a>
+      <a href="riwayat.html" class="mobile-nav-item"><i class="fas fa-history"></i><span>Riwayat</span></a>
+      <a href="setting.html" class="mobile-nav-item"><i class="fas fa-cog"></i><span>Setting</span></a>
+    </nav>
+  </div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p style="margin-top: 1rem; color: var(--text-secondary);">Loading...</p>
+  </div>
+
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/auth.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Wait for Firebase auth to be ready
+      auth.onAuthStateChanged((user) => {
+        if (!user && !Utils.getStorage('webpos_session')) {
+          window.location.href = '../login.html';
+          return;
+        }
+        
+        // Load user data if available
+        if (user) {
+          Auth.loadUserData(user.uid);
+        }
+        
+        // Initialize topup
+        initTopup();
+      });
+
+      function initTopup() {
+      const user = Auth.getCurrentUser();
+      document.getElementById('userName').textContent = user?.name || user?.email || 'User';
+      document.getElementById('userRole').textContent = user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Kasir';
+
+      let amount = 0;
+      let adminFee = 0;
+
+      // Update summary display
+      function updateSummary() {
+        adminFee = parseInt(document.getElementById('adminFee').value) || 0;
+        const total = amount + adminFee;
+        
+        document.getElementById('summaryTopup').textContent = Utils.formatRupiah(amount);
+        document.getElementById('summaryAdminFee').textContent = Utils.formatRupiah(adminFee);
+        document.getElementById('summaryTotal').textContent = Utils.formatRupiah(total);
+      }
+
+      // Sidebar toggle
+      document.getElementById('menuToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+      });
+
+      document.getElementById('mobileMenuToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('mobile-open');
+      });
+
+      document.getElementById('btnLogout').addEventListener('click', () => {
+        Utils.confirm('Yakin ingin logout?', () => Auth.logout());
+      });
+
+      // Update display
+      function updateDisplay() {
+        document.getElementById('topupAmount').textContent = Utils.formatRupiah(amount);
+        updateSummary();
+      }
+
+      // Admin fee change
+      document.getElementById('adminFee').addEventListener('input', () => {
+        updateSummary();
+      });
+
+      // Numpad
+      document.querySelectorAll('.numpad-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const num = btn.dataset.num;
+          const action = btn.dataset.action;
+          
+          if (num !== undefined) {
+            amount = amount * 10 + parseInt(num);
+          } else if (action === 'clear') {
+            amount = 0;
+          } else if (action === 'backspace') {
+            amount = Math.floor(amount / 10);
+          }
+          
+          updateDisplay();
+        });
+      });
+
+      // Quick amounts
+      document.querySelectorAll('.quick-amount').forEach(btn => {
+        btn.addEventListener('click', () => {
+          amount = parseInt(btn.dataset.amount);
+          updateDisplay();
+        });
+      });
+
+      // Save topup
+      document.getElementById('btnSimpanTopup').addEventListener('click', async () => {
+        if (amount <= 0) {
+          Utils.showToast('Masukkan jumlah top up terlebih dahulu', 'warning');
+          return;
+        }
+
+        const adminFeeValue = parseInt(document.getElementById('adminFee').value) || 0;
+        const total = amount + adminFeeValue;
+
+        try {
+          Utils.showLoading('Menyimpan...');
+          
+          const today = Utils.getTodayString();
+          const transactionId = Utils.generateId('TOP');
+          
+          await database.ref(`transactions/${today}/${transactionId}`).set({
+            id: transactionId,
+            type: 'topup',
+            amount: amount,
+            adminFee: adminFeeValue,
+            total: total,
+            profit: adminFeeValue, // Admin fee masuk ke laba
+            note: document.getElementById('topupNote').value,
+            cashierId: user.uid,
+            cashierName: user.name,
+            timestamp: Date.now(),
+            status: 'completed'
+          });
+          
+          Utils.hideLoading();
+          Utils.showToast('Top up berhasil!', 'success');
+          
+          setTimeout(() => {
+            window.location.href = 'kas.html';
+          }, 1500);
+          
+        } catch (error) {
+          Utils.hideLoading();
+          Utils.showToast('Gagal menyimpan top up', 'error');
+        }
+      });
+      }
+    });
+  </script>
+</body>
+</html>

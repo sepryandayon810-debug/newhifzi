@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#6366f1">
+  <title>WebPOS - Kategori</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  
+  <link rel="stylesheet" href="../css/style.css">
+  
+  <style>
+    .kategori-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+
+    .kategori-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-color);
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: all var(--transition-base);
+      cursor: pointer;
+    }
+
+    .kategori-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--primary);
+    }
+
+    .kategori-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .kategori-info {
+      flex: 1;
+    }
+
+    .kategori-name {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .kategori-count {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .kategori-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .kategori-actions .btn-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .add-kategori-card {
+      border-style: dashed;
+      background: var(--bg-secondary);
+      justify-content: center;
+      flex-direction: column;
+      min-height: 100px;
+    }
+
+    .add-kategori-card i {
+      font-size: 2rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .add-kategori-card span {
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .add-kategori-card:hover {
+      background: rgba(99, 102, 241, 0.05);
+      border-color: var(--primary);
+    }
+
+    .add-kategori-card:hover i,
+    .add-kategori-card:hover span {
+      color: var(--primary);
+    }
+
+    .color-picker {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .color-option {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: all var(--transition-fast);
+    }
+
+    .color-option:hover {
+      transform: scale(1.1);
+    }
+
+    .color-option.selected {
+      border-color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-container">
+          <div class="logo-icon"><i class="fas fa-cash-register"></i></div>
+          <span class="logo-text">WebPOS</span>
+        </div>
+      </div>
+      <button class="menu-toggle" id="menuToggle"><i class="fas fa-chevron-left"></i></button>
+      <div class="sidebar-search">
+        <div class="search-input-wrapper">
+          <i class="fas fa-search"></i>
+          <input type="text" class="search-input" placeholder="Cari menu...">
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Utama</div>
+          <ul class="nav-menu">
+            <li class="nav-item"><a href="../index.html" class="nav-link"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="kasir.html" class="nav-link"><i class="fas fa-cash-register"></i><span>Kasir</span></a></li>
+            <li class="nav-item nav-dropdown open" data-dropdown>
+              <div class="nav-link nav-dropdown-toggle active"><div style="display:flex;align-items:center;gap:0.75rem;"><i class="fas fa-box"></i><span>Produk</span></div><i class="fas fa-chevron-down dropdown-arrow"></i></div>
+              <ul class="nav-submenu">
+                <li><a href="produk.html" class="nav-link"><span>Daftar Produk</span></a></li>
+                <li><a href="kategori.html" class="nav-link active"><span>Kategori</span></a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-profile" id="userProfile">
+          <div class="user-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
+          <div class="user-info">
+            <div class="user-name" id="userName">Loading...</div>
+            <div class="user-role" id="userRole">-</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="main-header">
+        <div class="header-left">
+          <button class="btn-icon d-md-none" id="mobileMenuToggle"><i class="fas fa-bars"></i></button>
+          <h1 class="header-title">Kategori Produk</h1>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" id="btnAddKategori">
+            <i class="fas fa-plus"></i>
+            <span class="d-none d-md-inline">Tambah Kategori</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="kategori-grid" id="kategoriGrid">
+          <div class="kategori-card add-kategori-card" id="btnAddKategoriCard">
+            <i class="fas fa-plus-circle"></i>
+            <span>Tambah Kategori Baru</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <nav class="mobile-nav">
+      <a href="../index.html" class="mobile-nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+      <a href="kasir.html" class="mobile-nav-item"><i class="fas fa-cash-register"></i><span>Kasir</span></a>
+      <a href="produk.html" class="mobile-nav-item"><i class="fas fa-box"></i><span>Produk</span></a>
+      <a href="riwayat.html" class="mobile-nav-item"><i class="fas fa-history"></i><span>Riwayat</span></a>
+      <a href="setting.html" class="mobile-nav-item"><i class="fas fa-cog"></i><span>Setting</span></a>
+    </nav>
+  </div>
+
+  <!-- Kategori Modal -->
+  <div class="modal-overlay" id="kategoriModal">
+    <div class="modal" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Tambah Kategori</h3>
+        <button class="modal-close" id="closeKategoriModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="kategoriForm">
+          <input type="hidden" id="kategoriId">
+          <div class="form-group">
+            <label class="form-label form-label-required">Nama Kategori</label>
+            <input type="text" class="form-input" id="kategoriName" required placeholder="Masukkan nama kategori">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pilih Warna</label>
+            <div class="color-picker" id="colorPicker">
+              <div class="color-option selected" style="background: #6366f1;" data-color="#6366f1"></div>
+              <div class="color-option" style="background: #10b981;" data-color="#10b981"></div>
+              <div class="color-option" style="background: #f59e0b;" data-color="#f59e0b"></div>
+              <div class="color-option" style="background: #ef4444;" data-color="#ef4444"></div>
+              <div class="color-option" style="background: #ec4899;" data-color="#ec4899"></div>
+              <div class="color-option" style="background: #3b82f6;" data-color="#3b82f6"></div>
+              <div class="color-option" style="background: #8b5cf6;" data-color="#8b5cf6"></div>
+              <div class="color-option" style="background: #14b8a6;" data-color="#14b8a6"></div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelKategori">Batal</button>
+        <button class="btn btn-primary" id="btnSaveKategori"><i class="fas fa-save"></i> Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p style="margin-top: 1rem; color: var(--text-secondary);">Loading...</p>
+  </div>
+
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/auth.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Wait for Firebase auth to be ready
+      auth.onAuthStateChanged((user) => {
+        if (!user && !Utils.getStorage('webpos_session')) {
+          window.location.href = '../login.html';
+          return;
+        }
+        
+        // Load user data if available
+        if (user) {
+          Auth.loadUserData(user.uid);
+        }
+        
+        // Initialize kategori
+        initKategori();
+      });
+
+      function initKategori() {
+      const user = Auth.getCurrentUser();
+      document.getElementById('userName').textContent = user?.name || user?.email || 'User';
+      document.getElementById('userRole').textContent = user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Kasir';
+
+      let categories = [];
+      let selectedColor = '#6366f1';
+      let currentCategory = null;
+
+      // Sidebar toggle
+      document.getElementById('menuToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+      });
+
+      document.getElementById('mobileMenuToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('mobile-open');
+      });
+
+      document.getElementById('btnLogout').addEventListener('click', () => {
+        Utils.confirm('Yakin ingin logout?', () => Auth.logout());
+      });
+
+      // Color picker
+      document.querySelectorAll('.color-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+          document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
+          opt.classList.add('selected');
+          selectedColor = opt.dataset.color;
+        });
+      });
+
+      // Load categories
+      async function loadCategories() {
+        try {
+          Utils.showLoading();
+          const snapshot = await database.ref('categories').once('value');
+          const cats = snapshot.val() || {};
+          
+          categories = Object.entries(cats).map(([id, data]) => ({ id, ...data }));
+          
+          renderCategories();
+          Utils.hideLoading();
+        } catch (error) {
+          console.error('Error loading categories:', error);
+          Utils.hideLoading();
+        }
+      }
+
+      // Render categories
+      function renderCategories() {
+        const grid = document.getElementById('kategoriGrid');
+        
+        const cards = categories.map(cat => `
+          <div class="kategori-card" data-id="${cat.id}">
+            <div class="kategori-icon" style="background: ${cat.color || '#6366f1'};">
+              <i class="fas fa-tag"></i>
+            </div>
+            <div class="kategori-info">
+              <div class="kategori-name">${cat.name}</div>
+              <div class="kategori-count">${cat.productCount || 0} produk</div>
+            </div>
+            <div class="kategori-actions">
+              <button class="btn-icon btn-sm" onclick="editCategory('${cat.id}')">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn-icon btn-sm" onclick="deleteCategory('${cat.id}')">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `).join('');
+        
+        grid.innerHTML = `
+          <div class="kategori-card add-kategori-card" id="btnAddKategoriCard">
+            <i class="fas fa-plus-circle"></i>
+            <span>Tambah Kategori Baru</span>
+          </div>
+          ${cards}
+        `;
+
+        document.getElementById('btnAddKategoriCard').addEventListener('click', openAddModal);
+      }
+
+      // Modal functions
+      const kategoriModal = document.getElementById('kategoriModal');
+
+      function openAddModal() {
+        currentCategory = null;
+        document.getElementById('modalTitle').textContent = 'Tambah Kategori';
+        document.getElementById('kategoriForm').reset();
+        document.getElementById('kategoriId').value = '';
+        kategoriModal.classList.add('active');
+      }
+
+      window.editCategory = (id) => {
+        const cat = categories.find(c => c.id === id);
+        if (!cat) return;
+        
+        currentCategory = cat;
+        document.getElementById('modalTitle').textContent = 'Edit Kategori';
+        document.getElementById('kategoriId').value = cat.id;
+        document.getElementById('kategoriName').value = cat.name;
+        
+        // Select color
+        document.querySelectorAll('.color-option').forEach(o => {
+          o.classList.toggle('selected', o.dataset.color === cat.color);
+        });
+        selectedColor = cat.color || '#6366f1';
+        
+        kategoriModal.classList.add('active');
+      };
+
+      window.deleteCategory = async (id) => {
+        Utils.confirm('Yakin ingin menghapus kategori ini?', async () => {
+          try {
+            Utils.showLoading();
+            await database.ref(`categories/${id}`).remove();
+            categories = categories.filter(c => c.id !== id);
+            renderCategories();
+            Utils.hideLoading();
+            Utils.showToast('Kategori berhasil dihapus', 'success');
+          } catch (error) {
+            Utils.hideLoading();
+            Utils.showToast('Gagal menghapus kategori', 'error');
+          }
+        });
+      };
+
+      // Close modal
+      document.getElementById('closeKategoriModal').addEventListener('click', () => {
+        kategoriModal.classList.remove('active');
+      });
+
+      document.getElementById('btnCancelKategori').addEventListener('click', () => {
+        kategoriModal.classList.remove('active');
+      });
+
+      // Save category
+      document.getElementById('btnSaveKategori').addEventListener('click', async () => {
+        const name = document.getElementById('kategoriName').value.trim();
+        if (!name) {
+          Utils.showToast('Nama kategori wajib diisi', 'warning');
+          return;
+        }
+
+        try {
+          Utils.showLoading();
+          
+          const data = {
+            name,
+            color: selectedColor,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+          };
+
+          if (currentCategory) {
+            await database.ref(`categories/${currentCategory.id}`).update(data);
+            Utils.showToast('Kategori berhasil diupdate', 'success');
+          } else {
+            const id = Utils.generateId('CAT');
+            data.id = id;
+            data.createdAt = firebase.database.ServerValue.TIMESTAMP;
+            data.productCount = 0;
+            await database.ref(`categories/${id}`).set(data);
+            Utils.showToast('Kategori berhasil ditambahkan', 'success');
+          }
+
+          kategoriModal.classList.remove('active');
+          loadCategories();
+        } catch (error) {
+          Utils.hideLoading();
+          Utils.showToast('Gagal menyimpan kategori', 'error');
+        }
+      });
+
+      document.getElementById('btnAddKategori').addEventListener('click', openAddModal);
+
+      loadCategories();
+      }
+    });
+  </script>
+</body>
+</html>

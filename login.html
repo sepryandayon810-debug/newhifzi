@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#6366f1">
+  <title>WebPOS - Riwayat Transaksi</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  
+  <link rel="stylesheet" href="../css/style.css">
+  
+  <style>
+    .riwayat-toolbar {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .date-filter {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .date-filter input {
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      background: var(--bg-card);
+      font-size: 0.875rem;
+    }
+
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .summary-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-xl);
+      padding: 1.25rem;
+      border: 1px solid var(--border-color);
+    }
+
+    .summary-card-title {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .summary-card-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .summary-card-value.success { color: var(--success); }
+    .summary-card-value.danger { color: var(--danger); }
+
+    .transaction-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .transaction-table th,
+    .transaction-table td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .transaction-table th {
+      background: var(--bg-secondary);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .transaction-table tr:hover {
+      background: var(--bg-secondary);
+    }
+
+    .transaction-type {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .transaction-type.penjualan {
+      background: rgba(99, 102, 241, 0.1);
+      color: var(--primary);
+    }
+
+    .transaction-type.topup {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+
+    .transaction-type.tarik {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+    }
+
+    @media (max-width: 768px) {
+      .transaction-table {
+        font-size: 0.75rem;
+      }
+      
+      .transaction-table th,
+      .transaction-table td {
+        padding: 0.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-container">
+          <div class="logo-icon"><i class="fas fa-cash-register"></i></div>
+          <span class="logo-text">WebPOS</span>
+        </div>
+      </div>
+      <button class="menu-toggle" id="menuToggle"><i class="fas fa-chevron-left"></i></button>
+      <div class="sidebar-search">
+        <div class="search-input-wrapper">
+          <i class="fas fa-search"></i>
+          <input type="text" class="search-input" placeholder="Cari menu...">
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Utama</div>
+          <ul class="nav-menu">
+            <li class="nav-item"><a href="../index.html" class="nav-link"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="kasir.html" class="nav-link"><i class="fas fa-cash-register"></i><span>Kasir</span></a></li>
+            <li class="nav-item nav-dropdown" data-dropdown>
+              <div class="nav-link nav-dropdown-toggle"><div style="display:flex;align-items:center;gap:0.75rem;"><i class="fas fa-box"></i><span>Produk</span></div><i class="fas fa-chevron-down dropdown-arrow"></i></div>
+              <ul class="nav-submenu">
+                <li><a href="produk.html" class="nav-link"><span>Daftar Produk</span></a></li>
+                <li><a href="kategori.html" class="nav-link"><span>Kategori</span></a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">Transaksi</div>
+          <ul class="nav-menu">
+            <li class="nav-item"><a href="riwayat.html" class="nav-link active"><i class="fas fa-history"></i><span>Riwayat Transaksi</span></a></li>
+            <li class="nav-item"><a href="kas.html" class="nav-link"><i class="fas fa-wallet"></i><span>Kas Management</span></a></li>
+          </ul>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-profile" id="userProfile">
+          <div class="user-avatar" id="userAvatar"><i class="fas fa-user"></i></div>
+          <div class="user-info">
+            <div class="user-name" id="userName">Loading...</div>
+            <div class="user-role" id="userRole">-</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="main-header">
+        <div class="header-left">
+          <button class="btn-icon d-md-none" id="mobileMenuToggle"><i class="fas fa-bars"></i></button>
+          <h1 class="header-title">Riwayat Transaksi</h1>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary" id="btnExport"><i class="fas fa-file-export"></i><span class="d-none d-md-inline">Export</span></button>
+          <button class="btn-icon" id="btnLogout"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <!-- Date Filter -->
+        <div class="riwayat-toolbar">
+          <div class="date-filter">
+            <input type="date" id="startDate">
+            <span>s/d</span>
+            <input type="date" id="endDate">
+            <button class="btn btn-primary" id="btnFilter"><i class="fas fa-filter"></i> Filter</button>
+          </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+          <div class="summary-card">
+            <div class="summary-card-title">Total Penjualan</div>
+            <div class="summary-card-value success" id="totalPenjualan">Rp 0</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-card-title">Total Transaksi</div>
+            <div class="summary-card-value" id="totalTransaksi">0</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-card-title">Total Laba</div>
+            <div class="summary-card-value success" id="totalLaba">Rp 0</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-card-title">Rata-rata Transaksi</div>
+            <div class="summary-card-value" id="rataRata">Rp 0</div>
+          </div>
+        </div>
+
+        <!-- Transactions Table -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-list"></i> Daftar Transaksi</h3>
+          </div>
+          <div class="card-body" style="padding: 0; overflow-x: auto;">
+            <table class="transaction-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Tanggal</th>
+                  <th>Tipe</th>
+                  <th>Metode</th>
+                  <th>Kasir</th>
+                  <th>Total</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="transactionList">
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 3rem;">
+                    <div class="empty-state">
+                      <div class="empty-state-icon"><i class="fas fa-receipt"></i></div>
+                      <p>Belum ada transaksi</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <nav class="mobile-nav">
+      <a href="../index.html" class="mobile-nav-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+      <a href="kasir.html" class="mobile-nav-item"><i class="fas fa-cash-register"></i><span>Kasir</span></a>
+      <a href="produk.html" class="mobile-nav-item"><i class="fas fa-box"></i><span>Produk</span></a>
+      <a href="riwayat.html" class="mobile-nav-item active"><i class="fas fa-history"></i><span>Riwayat</span></a>
+      <a href="setting.html" class="mobile-nav-item"><i class="fas fa-cog"></i><span>Setting</span></a>
+    </nav>
+  </div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p style="margin-top: 1rem; color: var(--text-secondary);">Loading...</p>
+  </div>
+
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/auth.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Wait for Firebase auth to be ready
+      auth.onAuthStateChanged((user) => {
+        if (!user && !Utils.getStorage('webpos_session')) {
+          window.location.href = '../login.html';
+          return;
+        }
+        
+        // Load user data if available
+        if (user) {
+          Auth.loadUserData(user.uid);
+        }
+        
+        // Initialize riwayat
+        initRiwayat();
+      });
+
+      function initRiwayat() {
+      const user = Auth.getCurrentUser();
+      document.getElementById('userName').textContent = user?.name || user?.email || 'User';
+      document.getElementById('userRole').textContent = user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Kasir';
+
+      // Set default dates
+      const today = Utils.getTodayString();
+      document.getElementById('startDate').value = today;
+      document.getElementById('endDate').value = today;
+
+      // Sidebar toggle
+      document.getElementById('menuToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+      });
+
+      document.getElementById('mobileMenuToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('mobile-open');
+      });
+
+      document.getElementById('btnLogout').addEventListener('click', () => {
+        Utils.confirm('Yakin ingin logout?', () => Auth.logout());
+      });
+
+      // Load transactions
+      async function loadTransactions() {
+        Utils.showLoading();
+        
+        try {
+          const startDate = document.getElementById('startDate').value;
+          const endDate = document.getElementById('endDate').value;
+          
+          let allTransactions = [];
+          let totalPenjualan = 0;
+          let totalLaba = 0;
+          
+          // Get date range
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+          
+          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            const snapshot = await database.ref(`transactions/${dateStr}`).once('value');
+            const trans = snapshot.val() || {};
+            
+            Object.entries(trans).forEach(([id, data]) => {
+              if (data.status !== 'cancelled') {
+                allTransactions.push({ id, ...data });
+                if (data.type === 'penjualan') {
+                  totalPenjualan += data.total || 0;
+                  totalLaba += data.profit || 0;
+                }
+                // Admin fee dari top up masuk ke laba
+                if (data.type === 'topup' && data.adminFee) {
+                  totalLaba += data.adminFee;
+                }
+              }
+            });
+          }
+          
+          // Sort by timestamp desc
+          allTransactions.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+          
+          // Update summary
+          document.getElementById('totalPenjualan').textContent = Utils.formatRupiah(totalPenjualan);
+          document.getElementById('totalTransaksi').textContent = allTransactions.length;
+          document.getElementById('totalLaba').textContent = Utils.formatRupiah(totalLaba);
+          document.getElementById('rataRata').textContent = Utils.formatRupiah(
+            allTransactions.length ? totalPenjualan / allTransactions.length : 0
+          );
+          
+          // Render table
+          const tbody = document.getElementById('transactionList');
+          
+          if (allTransactions.length === 0) {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 3rem;">
+                  <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-receipt"></i></div>
+                    <p>Belum ada transaksi</p>
+                  </div>
+                </td>
+              </tr>
+            `;
+          } else {
+            tbody.innerHTML = allTransactions.map(t => {
+              const typeLabels = {
+                penjualan: 'Penjualan',
+                topup: 'Top Up',
+                tarik: 'Tarik Tunai',
+                kas_masuk: 'Kas Masuk',
+                kas_keluar: 'Kas Keluar'
+              };
+              
+              return `
+                <tr>
+                  <td>${t.id}</td>
+                  <td>${Utils.formatDateTime(t.timestamp)}</td>
+                  <td><span class="transaction-type ${t.type}">${typeLabels[t.type] || t.type}</span></td>
+                  <td>${t.paymentMethod || '-'}</td>
+                  <td>${t.cashierName || '-'}</td>
+                  <td>${Utils.formatRupiah(t.total || t.amount || 0)}</td>
+                  <td>
+                    <button class="btn btn-sm btn-secondary" onclick="viewDetail('${t.id}')">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join('');
+          }
+          
+        } catch (error) {
+          console.error('Error loading transactions:', error);
+          Utils.showToast('Gagal memuat transaksi', 'error');
+        }
+        
+        Utils.hideLoading();
+      }
+
+      window.viewDetail = (id) => {
+        Utils.showToast('Detail transaksi akan segera tersedia', 'info');
+      };
+
+      document.getElementById('btnFilter').addEventListener('click', loadTransactions);
+
+      loadTransactions();
+      }
+    });
+  </script>
+</body>
+</html>

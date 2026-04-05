@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#6366f1">
+  <title>WebPOS - Dashboard</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/style.css">
+  
+  <style>
+    /* Dashboard Specific Styles */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-color);
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: all var(--transition-base);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .stat-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .stat-icon.purple {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    }
+
+    .stat-icon.green {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .stat-icon.orange {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+
+    .stat-icon.pink {
+      background: linear-gradient(135deg, #ec4899, #db2777);
+    }
+
+    .stat-content {
+      flex: 1;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .stat-value.success {
+      color: var(--success);
+    }
+
+    /* Content Grid */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    .quick-action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 1.25rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all var(--transition-fast);
+    }
+
+    .quick-action-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .quick-action-btn i {
+      font-size: 1.5rem;
+    }
+
+    /* Transaction List */
+    .transaction-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .transaction-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      transition: all var(--transition-fast);
+    }
+
+    .transaction-item:hover {
+      background: var(--border-color);
+    }
+
+    .transaction-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .transaction-icon.sale {
+      background: rgba(99, 102, 241, 0.1);
+      color: var(--primary);
+    }
+
+    .transaction-icon.income {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+
+    .transaction-icon.expense {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+    }
+
+    .transaction-info {
+      flex: 1;
+    }
+
+    .transaction-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+    }
+
+    .transaction-time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .transaction-amount {
+      font-weight: 700;
+      font-size: 0.9375rem;
+    }
+
+    .transaction-amount.positive {
+      color: var(--success);
+    }
+
+    .transaction-amount.negative {
+      color: var(--danger);
+    }
+
+    /* Low Stock Items */
+    .stock-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .stock-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.875rem;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+    }
+
+    .stock-info {
+      flex: 1;
+    }
+
+    .stock-name {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+    }
+
+    .stock-code {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .stock-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .stock-badge.low {
+      background: rgba(245, 158, 11, 0.1);
+      color: var(--warning);
+    }
+
+    .stock-badge.critical {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+    }
+
+    /* Chart Container */
+    .chart-container {
+      height: 300px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-container">
+          <div class="logo-icon">
+            <i class="fas fa-cash-register"></i>
+          </div>
+          <span class="logo-text">WebPOS</span>
+        </div>
+      </div>
+      
+      <button class="menu-toggle" id="menuToggle">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      
+      <div class="sidebar-search">
+        <div class="search-input-wrapper">
+          <i class="fas fa-search"></i>
+          <input type="text" class="search-input" id="menuSearch" placeholder="Cari menu...">
+        </div>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Utama</div>
+          <ul class="nav-menu">
+            <li class="nav-item">
+              <a href="index.html" class="nav-link active" data-menu="dashboard">
+                <i class="fas fa-home"></i>
+                <span>Dashboard</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="pages/kasir.html" class="nav-link" data-menu="kasir">
+                <i class="fas fa-cash-register"></i>
+                <span>Kasir</span>
+              </a>
+            </li>
+            <li class="nav-item nav-dropdown" data-dropdown>
+              <div class="nav-link nav-dropdown-toggle" data-menu="produk">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <i class="fas fa-box"></i>
+                  <span>Produk</span>
+                </div>
+                <i class="fas fa-chevron-down dropdown-arrow"></i>
+              </div>
+              <ul class="nav-submenu">
+                <li><a href="pages/produk.html" class="nav-link"><span>Daftar Produk</span></a></li>
+                <li><a href="pages/kategori.html" class="nav-link"><span>Kategori</span></a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        
+        <div class="nav-section">
+          <div class="nav-section-title">Transaksi</div>
+          <ul class="nav-menu">
+            <li class="nav-item">
+              <a href="pages/riwayat.html" class="nav-link" data-menu="riwayat">
+                <i class="fas fa-history"></i>
+                <span>Riwayat Transaksi</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="pages/kas.html" class="nav-link" data-menu="kas">
+                <i class="fas fa-wallet"></i>
+                <span>Kas Management</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="user-profile" id="userProfile">
+          <div class="user-avatar" id="userAvatar">
+            <i class="fas fa-user"></i>
+          </div>
+          <div class="user-info">
+            <div class="user-name" id="userName">Loading...</div>
+            <div class="user-role" id="userRole">-</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="main-header">
+        <div class="header-left">
+          <button class="btn-icon d-md-none" id="mobileMenuToggle">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 class="header-title">Dashboard</h1>
+        </div>
+        
+        <div class="header-stats" id="headerStats">
+          <div class="stat-item">
+            <span class="stat-label">Kas di Tangan</span>
+            <span class="stat-value" id="kasDitangan">Rp 0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Total Penjualan</span>
+            <span class="stat-value positive" id="totalPenjualan">Rp 0</span>
+          </div>
+        </div>
+        
+        <div class="header-actions">
+          <div class="status-indicator closed" id="shiftStatus">
+            <span class="status-dot"></span>
+            <span id="shiftText">Tutup</span>
+          </div>
+          <button class="btn-icon" id="btnTheme" title="Toggle Dark Mode">
+            <i class="fas fa-moon"></i>
+          </button>
+          <button class="btn-icon" id="btnLogout" title="Logout">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon purple">
+              <i class="fas fa-coins"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">Modal Awal</div>
+              <div class="stat-value" id="modalAwal">Rp 0</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <i class="fas fa-receipt"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">Total Transaksi</div>
+              <div class="stat-value" id="totalTransaksi">0</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon orange">
+              <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">Shift</div>
+              <div class="stat-value" id="shiftInfo">-</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon pink">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">Total Laba</div>
+              <div class="stat-value success" id="totalLaba">Rp 0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Content Grid -->
+        <div class="content-grid">
+          <!-- Left Column -->
+          <div>
+            <!-- Recent Transactions -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">
+                  <i class="fas fa-history"></i>
+                  Transaksi Terbaru
+                </h3>
+                <a href="pages/riwayat.html" class="btn btn-sm btn-ghost">
+                  Lihat Semua <i class="fas fa-arrow-right" style="margin-left: 0.5rem;"></i>
+                </a>
+              </div>
+              <div class="card-body">
+                <div class="transaction-list" id="recentTransactions">
+                  <div class="empty-state">
+                    <div class="empty-state-icon">
+                      <i class="fas fa-receipt"></i>
+                    </div>
+                    <p class="empty-state-text">Belum ada transaksi hari ini</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sales Chart -->
+            <div class="card" style="margin-top: 1.5rem;">
+              <div class="card-header">
+                <h3 class="card-title">
+                  <i class="fas fa-chart-bar"></i>
+                  Grafik Penjualan
+                </h3>
+                <select class="form-select" style="width: auto; font-size: 0.875rem;" id="chartPeriod">
+                  <option value="today">Hari Ini</option>
+                  <option value="week">Minggu Ini</option>
+                  <option value="month">Bulan Ini</option>
+                </select>
+              </div>
+              <div class="card-body">
+                <div class="chart-container">
+                  <p>Grafik akan ditampilkan di sini</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column -->
+          <div>
+            <!-- Low Stock Alert -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">
+                  <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i>
+                  Stok Menipis
+                </h3>
+              </div>
+              <div class="card-body">
+                <div class="stock-list" id="lowStockList">
+                  <div class="empty-state">
+                    <div class="empty-state-icon" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                      <i class="fas fa-box"></i>
+                    </div>
+                    <p class="empty-state-text">Semua stok aman</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card" style="margin-top: 1.5rem;">
+              <div class="card-header">
+                <h3 class="card-title">
+                  <i class="fas fa-bolt" style="color: var(--primary);"></i>
+                  Aksi Cepat
+                </h3>
+              </div>
+              <div class="card-body">
+                <div class="quick-actions">
+                  <a href="pages/kasir.html" class="quick-action-btn">
+                    <i class="fas fa-cash-register"></i>
+                    <span>Buka Kasir</span>
+                  </a>
+                  <a href="pages/produk.html" class="quick-action-btn">
+                    <i class="fas fa-plus"></i>
+                    <span>Tambah Produk</span>
+                  </a>
+                  <a href="pages/modal.html" class="quick-action-btn">
+                    <i class="fas fa-coins"></i>
+                    <span>Set Modal</span>
+                  </a>
+                  <button class="quick-action-btn" id="btnToggleShift">
+                    <i class="fas fa-store-slash"></i>
+                    <span id="shiftBtnText">Tutup Shift</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-nav">
+      <a href="index.html" class="mobile-nav-item active">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="pages/kasir.html" class="mobile-nav-item">
+        <i class="fas fa-cash-register"></i>
+        <span>Kasir</span>
+      </a>
+      <a href="pages/produk.html" class="mobile-nav-item">
+        <i class="fas fa-box"></i>
+        <span>Produk</span>
+      </a>
+      <a href="pages/riwayat.html" class="mobile-nav-item">
+        <i class="fas fa-history"></i>
+        <span>Riwayat</span>
+      </a>
+      <a href="pages/setting.html" class="mobile-nav-item">
+        <i class="fas fa-cog"></i>
+        <span>Setting</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p style="margin-top: 1rem; color: var(--text-secondary);">Loading...</p>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Wait for Firebase auth to be ready
+      auth.onAuthStateChanged((user) => {
+        if (!user && !Utils.getStorage('webpos_session')) {
+          window.location.href = 'login.html';
+          return;
+        }
+        
+        // Load user data if available
+        if (user) {
+          Auth.loadUserData(user.uid);
+        }
+        
+        // Initialize dashboard
+        initDashboard();
+      });
+
+      function initDashboard() {
+      // State
+      let isShiftOpen = false;
+      let todayStats = {
+        modalAwal: 0,
+        penjualan: 0,
+        topup: 0,
+        tarik: 0,
+        kasMasuk: 0,
+        kasKeluar: 0,
+        laba: 0,
+        transaksiCount: 0
+      };
+
+      // DOM Elements
+      const sidebar = document.getElementById('sidebar');
+      const menuToggle = document.getElementById('menuToggle');
+      const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+      const btnTheme = document.getElementById('btnTheme');
+      const btnLogout = document.getElementById('btnLogout');
+      const btnToggleShift = document.getElementById('btnToggleShift');
+
+      // Load user data
+      function loadUserData() {
+        const user = Auth.getCurrentUser();
+        if (user) {
+          document.getElementById('userName').textContent = user.name || user.email;
+          document.getElementById('userRole').textContent = 
+            user.role.charAt(0).toUpperCase() + user.role.slice(1);
+          
+          const avatar = document.getElementById('userAvatar');
+          if (avatar && user.name) {
+            const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            avatar.textContent = initials;
+          }
+        }
+      }
+
+      // Toggle sidebar
+      menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+        const icon = menuToggle.querySelector('i');
+        icon.style.transform = sidebar.classList.contains('collapsed') ? 'rotate(180deg)' : 'rotate(0deg)';
+      });
+
+      // Mobile menu toggle
+      mobileMenuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('mobile-open');
+      });
+
+      // Close sidebar when clicking outside on mobile
+      document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 1024) {
+          if (!sidebar.contains(e.target) && !mobileMenuToggle.contains(e.target)) {
+            sidebar.classList.remove('mobile-open');
+          }
+        }
+      });
+
+      // Dropdown menus
+      document.querySelectorAll('[data-dropdown]').forEach(dropdown => {
+        const toggle = dropdown.querySelector('.nav-dropdown-toggle');
+        if (toggle) {
+          toggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            dropdown.classList.toggle('open');
+          });
+        }
+      });
+
+      // Theme toggle
+      btnTheme.addEventListener('click', () => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        btnTheme.innerHTML = isDark ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+        localStorage.setItem('dark_mode', !isDark);
+      });
+
+      // Load theme preference
+      if (localStorage.getItem('dark_mode') === 'true') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        btnTheme.innerHTML = '<i class="fas fa-sun"></i>';
+      }
+
+      // Logout
+      btnLogout.addEventListener('click', () => {
+        Utils.confirm('Apakah Anda yakin ingin logout?', () => {
+          Auth.logout();
+        });
+      });
+
+      // Load dashboard data
+      async function loadDashboardData() {
+        Utils.showLoading();
+        
+        try {
+          const today = Utils.getTodayString();
+          const user = Auth.getCurrentUser();
+          
+          // Load transactions
+          const transSnapshot = await database.ref('transactions/' + today).once('value');
+          const transactions = transSnapshot.val() || {};
+          
+          // Calculate stats
+          Object.values(transactions).forEach(trans => {
+            if (trans.status !== 'cancelled') {
+              switch (trans.type) {
+                case 'penjualan':
+                  todayStats.penjualan += trans.total || 0;
+                  todayStats.laba += trans.profit || 0;
+                  break;
+                case 'topup':
+                  todayStats.topup += trans.total || 0;
+                  // Admin fee dari top up masuk ke laba
+                  todayStats.laba += trans.adminFee || 0;
+                  break;
+                case 'tarik':
+                  todayStats.tarik += trans.total || 0;
+                  break;
+                case 'kas_masuk':
+                  todayStats.kasMasuk += trans.amount || 0;
+                  break;
+                case 'kas_keluar':
+                  todayStats.kasKeluar += trans.amount || 0;
+                  break;
+              }
+              todayStats.transaksiCount++;
+            }
+          });
+
+          // Load modal
+          const modalSnapshot = await database.ref('modal/' + today + '/' + user.uid).once('value');
+          const modalData = modalSnapshot.val();
+          todayStats.modalAwal = modalData ? modalData.amount : 0;
+
+          // Calculate kas ditangan
+          const kasDitangan = todayStats.modalAwal + todayStats.penjualan + todayStats.topup + 
+                             todayStats.kasMasuk - todayStats.tarik - todayStats.kasKeluar;
+
+          // Update UI
+          document.getElementById('kasDitangan').textContent = Utils.formatRupiah(kasDitangan);
+          document.getElementById('totalPenjualan').textContent = Utils.formatRupiah(todayStats.penjualan);
+          document.getElementById('modalAwal').textContent = Utils.formatRupiah(todayStats.modalAwal);
+          document.getElementById('totalTransaksi').textContent = Utils.formatNumber(todayStats.transaksiCount);
+          document.getElementById('totalLaba').textContent = Utils.formatRupiah(todayStats.laba);
+
+          // Load recent transactions
+          loadRecentTransactions(transactions);
+
+          // Check shift status
+          checkShiftStatus();
+
+          // Load low stock
+          loadLowStock();
+
+        } catch (error) {
+          console.error('Error loading dashboard data:', error);
+          Utils.showToast('Gagal memuat data dashboard', 'error');
+        }
+        
+        Utils.hideLoading();
+      }
+
+      // Load recent transactions
+      function loadRecentTransactions(transactions) {
+        const container = document.getElementById('recentTransactions');
+        const transArray = Object.entries(transactions)
+          .map(([id, data]) => ({ id, ...data }))
+          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+          .slice(0, 5);
+
+        if (transArray.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">
+                <i class="fas fa-receipt"></i>
+              </div>
+              <p class="empty-state-text">Belum ada transaksi hari ini</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = transArray.map(trans => {
+          const typeConfig = {
+            penjualan: { icon: 'fa-shopping-cart', class: 'sale', label: 'Penjualan' },
+            topup: { icon: 'fa-arrow-up', class: 'income', label: 'Top Up' },
+            tarik: { icon: 'fa-arrow-down', class: 'expense', label: 'Tarik Tunai' },
+            kas_masuk: { icon: 'fa-plus', class: 'income', label: 'Kas Masuk' },
+            kas_keluar: { icon: 'fa-minus', class: 'expense', label: 'Kas Keluar' }
+          };
+          
+          const config = typeConfig[trans.type] || { icon: 'fa-receipt', class: 'sale', label: trans.type };
+          const amount = trans.total || trans.amount || 0;
+          const isPositive = ['penjualan', 'topup', 'kas_masuk'].includes(trans.type);
+          
+          return `
+            <div class="transaction-item">
+              <div class="transaction-icon ${config.class}">
+                <i class="fas ${config.icon}"></i>
+              </div>
+              <div class="transaction-info">
+                <div class="transaction-title">${config.label}</div>
+                <div class="transaction-time">${Utils.formatDateTime(trans.timestamp)}</div>
+              </div>
+              <div class="transaction-amount ${isPositive ? 'positive' : 'negative'}">
+                ${isPositive ? '+' : '-'} ${Utils.formatRupiah(amount)}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Check shift status
+      async function checkShiftStatus() {
+        const today = Utils.getTodayString();
+        const user = Auth.getCurrentUser();
+        
+        try {
+          const snapshot = await database.ref('shifts/' + today + '/' + user.uid).once('value');
+          const shift = snapshot.val();
+          isShiftOpen = shift && shift.status === 'open';
+          updateShiftUI();
+        } catch (error) {
+          console.error('Error checking shift:', error);
+        }
+      }
+
+      // Update shift UI
+      function updateShiftUI() {
+        const shiftStatus = document.getElementById('shiftStatus');
+        const shiftText = document.getElementById('shiftText');
+        const shiftInfo = document.getElementById('shiftInfo');
+        const shiftBtnText = document.getElementById('shiftBtnText');
+        const btnToggleShift = document.getElementById('btnToggleShift');
+        
+        if (isShiftOpen) {
+          shiftStatus.classList.remove('closed');
+          shiftStatus.classList.add('open');
+          shiftText.textContent = 'Buka';
+          shiftInfo.textContent = 'Shift 1';
+          shiftBtnText.textContent = 'Tutup Shift';
+          btnToggleShift.querySelector('i').className = 'fas fa-store-slash';
+        } else {
+          shiftStatus.classList.remove('open');
+          shiftStatus.classList.add('closed');
+          shiftText.textContent = 'Tutup';
+          shiftInfo.textContent = '-';
+          shiftBtnText.textContent = 'Buka Shift';
+          btnToggleShift.querySelector('i').className = 'fas fa-store';
+        }
+      }
+
+      // Toggle shift
+      async function toggleShift() {
+        const today = Utils.getTodayString();
+        const user = Auth.getCurrentUser();
+        
+        if (isShiftOpen) {
+          Utils.confirm('Apakah Anda yakin ingin menutup shift?', async () => {
+            try {
+              await database.ref('shifts/' + today + '/' + user.uid).update({
+                status: 'closed',
+                closedAt: firebase.database.ServerValue.TIMESTAMP,
+                closedBy: user.uid
+              });
+              isShiftOpen = false;
+              updateShiftUI();
+              Utils.showToast('Shift berhasil ditutup', 'success');
+            } catch (error) {
+              Utils.showToast('Gagal menutup shift', 'error');
+            }
+          });
+        } else {
+          try {
+            const modalSnapshot = await database.ref('modal/' + today + '/' + user.uid).once('value');
+            const modal = modalSnapshot.val();
+            
+            if (!modal || !modal.amount) {
+              Utils.showToast('Silakan set modal awal terlebih dahulu', 'warning');
+              window.location.href = 'pages/modal.html';
+              return;
+            }
+            
+            await database.ref('shifts/' + today + '/' + user.uid).set({
+              status: 'open',
+              openedAt: firebase.database.ServerValue.TIMESTAMP,
+              openedBy: user.uid,
+              modalAwal: modal.amount
+            });
+            
+            isShiftOpen = true;
+            updateShiftUI();
+            Utils.showToast('Shift berhasil dibuka', 'success');
+          } catch (error) {
+            Utils.showToast('Gagal membuka shift', 'error');
+          }
+        }
+      }
+
+      btnToggleShift.addEventListener('click', toggleShift);
+
+      // Load low stock items
+      async function loadLowStock() {
+        try {
+          const snapshot = await database.ref('products').once('value');
+          const products = snapshot.val() || {};
+          
+          const lowStockItems = Object.entries(products)
+            .map(([id, data]) => ({ id, ...data }))
+            .filter(p => p.stock <= (p.minStock || 5) && p.status !== 'inactive')
+            .slice(0, 5);
+
+          const container = document.getElementById('lowStockList');
+          
+          if (lowStockItems.length === 0) {
+            container.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-state-icon" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                  <i class="fas fa-box"></i>
+                </div>
+                <p class="empty-state-text">Semua stok aman</p>
+              </div>
+            `;
+            return;
+          }
+
+          container.innerHTML = lowStockItems.map(item => `
+            <div class="stock-item">
+              <div class="stock-info">
+                <div class="stock-name">${item.name}</div>
+                <div class="stock-code">${item.code || '-'}</div>
+              </div>
+              <span class="stock-badge ${item.stock === 0 ? 'critical' : 'low'}">
+                Stok: ${item.stock}
+              </span>
+            </div>
+          `).join('');
+
+        } catch (error) {
+          console.error('Error loading low stock:', error);
+        }
+      }
+
+      // Initialize
+      loadUserData();
+      loadDashboardData();
+      }
+    });
+  </script>
+</body>
+</html>
